@@ -1,0 +1,39 @@
+#hostGame,
+#connectToGame,
+#waitForStart,
+#mainGame,
+#scoreNames,
+#results,
+.validName,
+.invalidName,
+.removeName {
+    display: none;
+}
+
+.icon {
+    vertical-align: top;
+    width: 20px;
+    height: 20px;
+    background-color: lightgray;
+    border: 1px solid black;
+    text-align: center;
+}
+
+.validName {
+    display: none;
+    background-color: cornflowerblue;
+}
+
+.invalidName {
+    display: none;
+    background-color: coral;
+}
+
+.removeName {
+    display: none;
+}
+
+.nameDisplay {
+    display: inline;
+    min-width: 200px;
+}

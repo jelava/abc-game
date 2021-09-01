@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>The ABC Game</title>
+        <link rel="stylesheet" href="index.css">
+        <script src="abc.js"></script>
+    </head>
+
+    <body>
+        <h1>The 🄰🄱🄲 Game</h1>
+        
+        <div id="hostOrConnect">
+            <button onclick="onHost(event)">Host a game</button>
+            <button onclick="onConnect(event)">Connect to a game</button>
+        </div>
+
+        <div id="hostGame">
+            <h3>Host</h3>
+            <p>Share this number with the other people who will be playing this game: <span id="hostGameId">###</span></p>
+            <p>There are <span class="connectedPlayerCount">#</span> player(s) connected</p>
+            <button onclick="onHostStart(event)">Start the game!</button>
+            <button onclick="onHostCancel(event)">Cancel</button>
+        </div>
+
+        <div id="connectToGame">
+            <h4>Connect</h4>
+            <label>Game ID:
+                <input name="gameId" type="text" required>
+            </label>
+            <br>
+            <button onclick="onReady(event)">Ready to play!</button>
+            <button onClick="onCancel(event)">Cancel</button>
+        </div>
+
+        <div id="waitForStart">
+            <h4>Connected</h4>
+            <p>Game ID: <span id="connectedGameId">###</span></p>
+            <p>There are <span class="connectedPlayerCount">#</span> player(s) connected</p>
+            <p>Waiting for the game to begin...</p>
+        </div>
+
+        <div id="mainGame">
+            <p>Time left: <span id="gameTimer">#:##</span></p>
+            <div class="nameList">
+                <h3 class="initials">__</h3>
+                <ol>
+                    <li class="nameInput">
+                        <input type="text" oninput="onNameChange(event)">
+                        <button class="removeName icon" onclick="onRemoveName(event)">-</button>
+                        <span class="validName icon">✓</span>
+                        <button class="invalidName icon" onclick="onShowValidationError(event)">?</button>
+                    </li>
+                </ol>
+            </div>
+        </div>
+
+        <div id="scoreNames">
+            <h3>Check names</h3>
+            <div class="nameList">
+                <h3 class="initials">__</h3>
+                <ol>
+                    <li class="nameListItem">
+                        <p class="nameDisplay"></p>
+                        <a class="searchName icon">🔍</a>
+                        <input type="checkbox" checked>
+                    </li>
+                </ol>
+            </div>
+            <button onclick="onSubmitRatings(event)">Submit ratings</button>
+        </div>
+
+        <div id="results">
+            <h4>Results</h4>
+            <ol>
+                <li class="resultName">
+                    <p class="playerName">Somebody</p>
+                    <p>Game: <span class="gameScore">###</span> points</p>
+                    <p>Total: <span class="totalScore">###</span> points</p>
+                </li>
+            </ol>
+        </div>
+    </body>
+</html>
