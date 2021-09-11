@@ -11,14 +11,21 @@
     <body>
         <h1>The 🄰🄱🄲 Game</h1>
         
+        <div id="createUser">
+            <h3>Welcome!</h3>
+            <p>Enter a nickname below, or use a randomly chosen one:</p>
+            <input name="userName" type="text" required>
+            <button onclick=onCreateUser>Use this name</button>
+        </div>
+
         <div id="hostOrConnect">
-            <button onclick="onHost(event)">Host a game</button>
-            <button onclick="onConnect(event)">Connect to a game</button>
+            <h3>Open games:</h3>
+            <ul id="gameList"></ul>
+            <button onclick="onHost(event)">Host a new game</button>
         </div>
 
         <div id="hostGame">
-            <h3>Host</h3>
-            <p>Share this number with the other people who will be playing this game: <span id="hostGameId">###</span></p>
+            <h3>Host a game</h3>
             <p>There are <span class="connectedPlayerCount">#</span> player(s) connected</p>
             <button onclick="onHostStart(event)">Start the game!</button>
             <button onclick="onHostCancel(event)">Cancel</button>

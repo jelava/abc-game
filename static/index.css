@@ -1,3 +1,5 @@
+/* all of these default to being hidden */
+#hostOrConnect,
 #hostGame,
 #connectToGame,
 #waitForStart,
@@ -20,17 +22,11 @@
 }
 
 .validName {
-    display: none;
     background-color: cornflowerblue;
 }
 
 .invalidName {
-    display: none;
     background-color: coral;
-}
-
-.removeName {
-    display: none;
 }
 
 .nameDisplay {

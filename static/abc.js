@@ -1,49 +1,82 @@
-const letters = [
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-    'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
-];
+/************************
+ * Choosing a user name *
+ ************************/
 
-const numInitials = 26;
-let allInitials = [];
 
-const timeLimit = 1000 * 60 * 0.5;
-let timerEnd = Date.now();
+
+/*************************
+ * Displaying open games *
+ *************************/
+
+let gameId = -1;
+
+const fillGameList = games => {
+    const gameList = document.getElementById('gameList');
+
+    if (games.length > 0) {
+        for (const [gameId, game] of games.entries()) {
+            let gameDescription = `${game.name} – host: ${game.host_name}, players: ${game.player_count}`;
+
+            const link = document.createElement('a');
+            link.setAttribute('href', `#game/${gameId}`);
+            link.addEventListener('click', onJoinGame(gameId));
+            link.appendChild(document.createTextNode(gameDescription));
+
+            const listItem = document.createElement('li');
+            listItem.appendChild(link);
+            gameList.appendChild(listItem);
+        }
+    } else {
+        const listItem = document.createElement('li');
+        listItem.appendChild(document.createTextNode('There are no open games. Press the button below to host a new game, or try refreshing the page to see if a new game has opened.'));
+        gameList.appendChild(listItem);
+    }
+};
+
+let userId = fetch('/users/test', { method: 'POST' })
+    .then(response => response.json())
+    .then(json => json.user_id)
+    .catch(console.error);
+
+fetch('/games', { method: 'GET' })
+    .then(response => response.json())
+    .then(json => json.games)
+    .then(fillGameList)
+    .catch(console.error);
+
+const onJoinGame = selectGameId => async () => {
+    gameId = selectGameId;
+    userId = await userId;
+
+    const initials = await fetch(`/games/${gameId}/join/${userId}`, { method: 'PATCH' })
+        .then(response => response.json())
+        .then(json => json.initials);
+
+    console.log(initials);
+
+    document.getElementById('hostOrConnect').style.display = 'none';
+    startGame(initials);
+};
 
 /******************
  * Hosting a game *
  ******************/
 
-const onHost = event => {
+const onHost = () => {
     document.getElementById('hostOrConnect').style.display = 'none';
     document.getElementById('hostGame').style.display = 'revert';
 };
 
-const onHostCancel = event => {
+const onHostCancel = () => {
     console.log('host canceled');
     document.getElementById('hostGame').style.display = 'none';
     document.getElementById('hostOrConnect').style.display = 'revert';
 };
 
-const onHostStart = event => {
-    pickInitials();
+const onHostStart = () => {
     document.getElementById('hostGame').style.display = 'none';
+    console.warn('TODO!')
     startGame();
-};
-
-const pickInitials = () => {
-    let r1 = 0;
-    let r2 = 0;
-    let initials = '';
-
-    while (allInitials.length < numInitials) {
-        r1 = Math.floor(letters.length * Math.random());
-        r2 = Math.floor(letters.length * Math.random());
-        initials = letters[r1] + letters[r2];
-
-        if (allInitials.indexOf(initials) < 0) {
-            allInitials.push(initials);
-        }
-    }
 };
 
 /************************
@@ -69,17 +102,20 @@ const onCancel = event => {
  * Main game *
  *************/
 
- const startGame = () => {
+const timeLimit = 1000 * 60 * 0.5;
+let timerEnd = Date.now(); 
+
+const startGame = initials => {
     document.getElementById('mainGame').style.display = 'revert';
 
     // create N-1 copies of the nameList div and sets initials for each one
     const mainGameDiv = document.getElementById('mainGame')
     const nameListDiv = mainGameDiv.querySelector('.nameList');
-    nameListDiv.querySelector('.initials').innerHTML = allInitials[0];
+    nameListDiv.querySelector('.initials').innerHTML = initials[0];
 
-    for (let i = 1; i < allInitials.length; i++) {
+    for (let i = 1; i < initials.length; i++) {
         const clonedNameListDiv = nameListDiv.cloneNode(true);
-        clonedNameListDiv.querySelector('.initials').innerHTML = allInitials[i];
+        clonedNameListDiv.querySelector('.initials').innerHTML = initials[i];
         mainGameDiv.appendChild(clonedNameListDiv);
     }
 
