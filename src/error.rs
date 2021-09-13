@@ -1,30 +1,34 @@
 use actix_web::error::ResponseError;
 use derive_more::{Display, Error};
-use std::sync::TryLockError;
+use futures::channel::mpsc::TrySendError;
 
-#[derive(Debug, Display, Error)]
+#[derive(Clone, Copy, Debug, Display, Error)]
 pub enum Error {
     #[display(fmt = "An internal error occurred on the server.")]
     Internal(InternalError),
 
-    #[display(fmt = "There is no game with ID {}.", "_0")]
-    NonexistentGameId(#[error(not(source))] usize),
+    #[display(fmt = "There is no game with the requested ID.")]
+    NonexistentGameId,
 
-    #[display(fmt = "There is no user with ID {}.", "_0")]
-    NonexistentUserId(#[error(not(source))] usize)
+    #[display(fmt = "There is no user with the requested ID.")]
+    NonexistentUserId,
 }
 
 impl ResponseError for Error {
     // TODO?
 }
 
-#[derive(Debug, Display, Error)]
+#[derive(Clone, Copy, Debug, Display, Error)]
 pub enum InternalError {
-    PoisonedMutex
+    DuplicateGameId,
+    DuplicateUserId,
+    NoAvailableIds,
+    PoisonedMutex,
+    SseTrySendError
 }
 
-impl<T> From<TryLockError<T>> for Error {
-    fn from(_: TryLockError<T>) -> Self {
-        Error::Internal(InternalError::PoisonedMutex)
+impl<T> From<TrySendError<T>> for Error {
+    fn from(_: TrySendError<T>) -> Self {
+        Self::Internal(InternalError::SseTrySendError)
     }
 }

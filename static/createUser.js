@@ -56,6 +56,19 @@ const animals = [
     'zebu'
 ];
 
+document.addEventListener('DOMContentLoaded', () => {
+    const userId = sessionStorage.getItem('userId');
+    const oldUserName = localStorage.getItem('userName');
+
+    if (userId) {
+        location.pathname='/games.html';
+    } else if (oldUserName) {
+        document.getElementById('userNameInput').value = oldUserName;
+    } else {
+        onRandomizeName();
+    }
+});
+
 const onCreateUser = async event => {
     const userName = document.getElementById('userNameInput').value;
 
@@ -66,9 +79,9 @@ const onCreateUser = async event => {
             .then(response => response.json())
             .then(json => json.user_id);
 
-        console.log(`user ID: ${userId}`);
         sessionStorage.setItem('userId', userId);
-        location.pathname='/index.html'
+        localStorage.setItem('userName', userName);
+        location.pathname = '/games.html'
     } else {
         alert('Please choose a nickname with at least three letters.');
     }
@@ -79,5 +92,3 @@ const onRandomizeName = () => {
     const r2 = Math.floor(Math.random() * animals.length);
     document.getElementById('userNameInput').value = `${adjectives[r1]} ${animals[r2]}`;
 };
-
-document.addEventListener('DOMContentLoaded', onRandomizeName);

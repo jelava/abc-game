@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>The ABC Game</title>
+        <script src="wait.js"></script>
+    </head>
+
+    <body>
+        <h1>The 🄰🄱🄲 Game</h1>
+        <p>Connected to: <span id="gameName"></span> – hosted by <span id="hostName"></span></p>
+        <p>There <span id="playerCount"></span> connected</p>
+        <p class="hostOnly">Once enough players are connected, start the game:</p>
+        <button class="hostOnly" onclick="onHostStart">Start</button>
+        <p class="playerOnly">Waiting for host to start the game...</p>
+        <button onclick="onCancel(event)">Cancel</button>
+    </body>
+</html>
