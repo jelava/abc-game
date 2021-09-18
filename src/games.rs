@@ -1,5 +1,5 @@
 use actix_web::{get, HttpResponse, patch, post, put, web};
-use crate::{error::Error, State};
+use crate::{error::Error, sse, State};
 use futures::{FutureExt, join, try_join};
 use serde::Serialize;
 use std::collections::HashSet;
@@ -63,6 +63,16 @@ impl From<OpenGame> for ActiveGame {
     }
 }
 
+fn generate_initials(num_initials: usize) -> Vec<(char, char)> {
+    let mut initials = Vec::new();
+
+    for i in 0..num_initials {
+        initials.push((LETTERS[i % 26], LETTERS[i % 26]))
+    }
+
+    initials
+}
+
 #[derive(Copy, Clone)]
 struct GameConfig {
     num_initials: usize
@@ -83,7 +93,7 @@ struct HostGameResponse {
 
 #[post("/{name}/host/{host_id}")]
 async fn host_game<'a>(web::Path((name, host_id)): web::Path<(String, usize)>, data: web::Data<State>) -> Result<HttpResponse, Error> {
-    let (users, mut games) = join!(data.connected_users.lock(), data.open_games.lock());
+    let (users, mut games) = join!(data.unconnected_users.lock(), data.open_games.lock());
 
     let host_name = users.get(host_id)?
         .name
@@ -167,24 +177,15 @@ async fn start_game<'a>(web::Path(game_id): web::Path<usize>, data: web::Data<St
         data.connected_users.lock()
     );
 
-    let game = open_games.remove(game_id)?;
-    active_games.insert_existing(game_id, game.into())?;
+    let game: ActiveGame = open_games.remove(game_id)?
+        .into();
 
     for user in users.iter_mut() {
-        todo!();
-        user.sender.try_send(Ok(web::Bytes::from("event: startGame\ndata: TODO\n\n")))?;
+        user.sender.try_send(sse::Event::StartGame(&game.initials))?;
     }
+
+    active_games.insert_existing(game_id, game)?;
 
     Ok(HttpResponse::Ok()
         .finish())
-}
-
-fn generate_initials(num_initials: usize) -> Vec<(char, char)> {
-    let mut initials = Vec::new();
-
-    for i in 0..num_initials {
-        initials.push((LETTERS[i % 26], LETTERS[i % 26]))
-    }
-
-    initials
 }

@@ -1,6 +1,6 @@
-use actix_web::{get, HttpResponse, post, web, web::Bytes};
-use crate::{error::Error, State};
-use futures::{channel::mpsc::{channel, Receiver, Sender}, join};
+use actix_web::{get, HttpResponse, post, web};
+use crate::{error::Error, sse, State};
+use futures::{channel::mpsc::channel, join};
 use serde::Serialize;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
@@ -12,13 +12,12 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 }
 
 pub struct UnconnectedUser {
-    name: String
+    pub name: String
 }
 
 pub struct ConnectedUser {
     pub name: String,
-    //receiver: Receiver<Result<Bytes, Error>>,
-    pub sender: Sender<Result<Bytes, Error>>,
+    pub sender: sse::EventSender,
     //current_game_id: Option<usize>
     // maybe keep track of total score here?
 }
@@ -41,11 +40,14 @@ async fn create_user(web::Path(name): web::Path<String>, data: web::Data<State>)
 
 #[get("/{user_id}/events")]
 async fn get_event_stream(web::Path(user_id): web::Path<usize>, data: web::Data<State>) -> Result<HttpResponse, Error> {
-    let (sender, receiver) = channel::<Result<Bytes, Error>>(1024); // TODO should not be hard coded!
+    let (sender, receiver) = channel::<Result<web::Bytes, Error>>(1024); // TODO should not be hard coded!
     let (mut unconnected_users, mut connected_users) = join!(data.unconnected_users.lock(), data.connected_users.lock());
-
     let unconnected_user = unconnected_users.remove(user_id)?;
-    connected_users.insert_existing(user_id, ConnectedUser { name: unconnected_user.name, sender })?;
+
+    connected_users.insert_existing(user_id, ConnectedUser {
+        name: unconnected_user.name,
+        sender: sse::EventSender(sender)
+    })?;
 
     Ok(HttpResponse::Ok()
         .header("content-type", "text/event-stream")

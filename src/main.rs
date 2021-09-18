@@ -1,5 +1,6 @@
 mod error;
 mod games;
+mod sse;
 mod users;
 
 use actix_files::Files;
@@ -98,7 +99,7 @@ async fn main() -> std::io::Result<()> {
             .configure(games::config)
             .service(
                 Files::new("/", "./static")
-                    .index_file("index.html")
+                    .index_file("createUser.html")
             )
     })
     .bind("127.0.0.1:8080")?
