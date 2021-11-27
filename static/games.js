@@ -1,23 +1,25 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // TODO: error handling?
     fetch('/games', { method: 'GET' })
         .then(response => response.json())
         .then(json => json.games)
-        .then(fillGameList);
+        .then(fillGameList)
+        .then(connectToEvents)
+        .catch(console.error);
 });
 
 const fillGameList = games => {
     const gameList = document.getElementById('gameList');
 
     if (games.length > 0) {
-        for (const [gameId, game] of games.entries()) {
+        for (const game of games) {
             const button = document.createElement('button');
             button.appendChild(document.createTextNode('Join'));
-            button.addEventListener('click', onJoinGame(gameId));
+            button.addEventListener('click', onJoinGame(game.game_id, game.name, game.host_name));
 
             const gameDescription = `${game.name} – host: ${game.host_name}, players: ${game.player_count}`;
 
             const listItem = document.createElement('li');
+            listItem.setAttribute('gameId', game.game_id);
             listItem.appendChild(document.createTextNode(gameDescription))
             listItem.appendChild(button);
 
@@ -30,17 +32,30 @@ const fillGameList = games => {
     }
 };
 
-const onJoinGame = gameId => async () => {
+const connectToEvents = () => {
     const userId = sessionStorage.getItem('userId');
+    const eventSource = new EventSource(`/users/${userId}/events`);
+    eventSource.addEventListener('sseTest', event => console.log('sse test success'));
+    eventSource.addEventListener('gameOpened', onGameOpened);
+    eventSource.addEventListener('gameClosed', onGameClosed);
+};
 
-    const initials = await fetch(`/games/${gameId}/join/${userId}`, { method: 'PATCH' })
-        .then(response => response.json())
-        .then(json => json.initials);
+const onGameOpened = event => {
+    const gameInfo = JSON.parse(event.data);
+    const gameList = document.getElementById('gameList');
+};
 
+const onGameClosed = event => {
+    const gameId = event.data;
+};
+
+const onJoinGame = (gameId, gameName, hostName) => async () => {
     sessionStorage.setItem('gameId', gameId);
-    location.pathname = 'play.html';
+    sessionStorage.setItem('gameName', gameName);
+    sessionStorage.setItem('hostName', hostName);
+    location.pathname = 'wait.html';
 };
 
 const onHost = () => {
     alert('TODO!');
-}
+};

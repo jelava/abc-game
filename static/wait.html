@@ -10,9 +10,9 @@
     <body>
         <h1>The 🄰🄱🄲 Game</h1>
         <p>Connected to: <span id="gameName"></span> – hosted by <span id="hostName"></span></p>
-        <p>There <span id="playerCount"></span> connected</p>
+        <p>There <span id="playerCount">0 players</span> connected.</p>
         <p class="hostOnly">Once enough players are connected, start the game:</p>
-        <button class="hostOnly" onclick="onHostStart">Start</button>
+        <button class="hostOnly" onclick="onHostStart(event)">Start</button>
         <p class="playerOnly">Waiting for host to start the game...</p>
         <button onclick="onCancel(event)">Cancel</button>
     </body>

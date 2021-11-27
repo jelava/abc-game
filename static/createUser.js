@@ -10,7 +10,7 @@ const adjectives = [
     'irritating',
     'jaunty',
     'kaleidoscopic',
-    'lengthy',
+    'loyal',
     'microscopic',
     'noisy',
     'odious',
@@ -69,26 +69,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+const onRandomizeName = () => {
+    const r1 = Math.floor(Math.random() * adjectives.length);
+    const r2 = Math.floor(Math.random() * animals.length);
+    document.getElementById('userNameInput').value = `${adjectives[r1]} ${animals[r2]}`;
+};
+
 const onCreateUser = async event => {
     const userName = document.getElementById('userNameInput').value;
 
     if (userName.length >= 3) {
-        // TODO: error handling
-
-        let userId = await fetch(`/users/${userName}`, { method: 'POST' })
-            .then(response => response.json())
-            .then(json => json.user_id);
-
-        sessionStorage.setItem('userId', userId);
         localStorage.setItem('userName', userName);
-        location.pathname = '/games.html'
+        const eventSource = new EventSource(`/users/${userName}`);
+        eventSource.addEventListener('userCreated', onUserCreated);
     } else {
         alert('Please choose a nickname with at least three letters.');
     }
 };
 
-const onRandomizeName = () => {
-    const r1 = Math.floor(Math.random() * adjectives.length);
-    const r2 = Math.floor(Math.random() * animals.length);
-    document.getElementById('userNameInput').value = `${adjectives[r1]} ${animals[r2]}`;
+const onUserCreated = event => {
+    let userId = parseInt(event.data, 10);
+    sessionStorage.setItem('userId', userId);
+    location.pathname = '/games.html'
 };

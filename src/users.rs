@@ -1,6 +1,5 @@
-use actix_web::{get, HttpResponse, post, web};
 use crate::{error::Error, sse, State};
-use futures::{channel::mpsc::channel, join};
+use actix_web::{get, web, HttpResponse};
 use serde::Serialize;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
@@ -8,11 +7,12 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         web::scope("/users")
             .service(create_user)
             .service(get_event_stream)
+            .service(sse_test),
     );
 }
 
 pub struct UnconnectedUser {
-    pub name: String
+    pub name: String,
 }
 
 pub struct ConnectedUser {
@@ -24,40 +24,63 @@ pub struct ConnectedUser {
 
 #[derive(Serialize)]
 struct UsersResponse {
-    user_id: usize
+    user_id: usize,
 }
 
-#[post("/{name}")]
-async fn create_user(web::Path(name): web::Path<String>, data: web::Data<State>) -> Result<HttpResponse, Error> {
+#[get("/{name}")]
+async fn create_user(
+    web::Path(name): web::Path<String>,
+    data: web::Data<State>,
+) -> Result<HttpResponse, Error> {
+    let (mut sender, receiver) = sse::event_channel(); // TODO should not be hard coded!
+
     let user_id = {
-        let mut users = data.unconnected_users.lock().await;
-        users.insert_new(UnconnectedUser { name })?
+        let mut users = data.connected_users.lock().await;
+        users.insert_new(ConnectedUser {
+            name,
+            sender: sender.clone(),
+        })?
     };
 
-    Ok(HttpResponse::Ok()
-        .json(UsersResponse { user_id }))
-}
-
-#[get("/{user_id}/events")]
-async fn get_event_stream(web::Path(user_id): web::Path<usize>, data: web::Data<State>) -> Result<HttpResponse, Error> {
-    let (sender, receiver) = channel::<Result<web::Bytes, Error>>(1024); // TODO should not be hard coded!
-    let (mut unconnected_users, mut connected_users) = join!(data.unconnected_users.lock(), data.connected_users.lock());
-    let unconnected_user = unconnected_users.remove(user_id)?;
-
-    connected_users.insert_existing(user_id, ConnectedUser {
-        name: unconnected_user.name,
-        sender: sse::EventSender(sender)
-    })?;
+    sender.try_send(sse::Event::UserCreated(user_id))?;
 
     Ok(HttpResponse::Ok()
         .header("content-type", "text/event-stream")
         .streaming(receiver))
 }
 
+#[get("/{user_id}/events")]
+async fn get_event_stream(
+    web::Path(user_id): web::Path<usize>,
+    data: web::Data<State>,
+) -> Result<HttpResponse, Error> {
+    let (sender, receiver) = sse::event_channel();
+
+    let mut users = data.connected_users.lock().await;
+    let user = users.get_mut(user_id)?;
+    user.sender = sender;
+
+    Ok(HttpResponse::Ok()
+        .header("content-type", "text/event-stream")
+        .streaming(receiver))
+}
+
+#[get("/{user_id}/sse_test")]
+async fn sse_test(
+    web::Path(user_id): web::Path<usize>,
+    data: web::Data<State>,
+) -> Result<HttpResponse, Error> {
+    let mut users = data.connected_users.lock().await;
+    let user = users.get_mut(user_id)?;
+    user.sender
+        .try_send_bytes(web::Bytes::from("event: sseTest\ndata: whatever\n\n"))?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
 impl State {
-    pub async fn check_user_id(&self, user_id: usize) -> Result<(), Error> {
+    pub async fn check_connected_user_id(&self, user_id: usize) -> Result<(), Error> {
         let users = self.connected_users.lock().await;
-        users.get(user_id)
-            .map(|_| ())
+        users.get(user_id).map(|_| ())
     }
 }

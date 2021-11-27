@@ -1,34 +1,36 @@
-use actix_web::error::ResponseError;
-use derive_more::{Display, Error};
+use actix_web::{ResponseError, web::Bytes};
+use derive_more::{Display, Error, From};
 use futures::channel::mpsc::TrySendError;
+use serde_json;
 
-#[derive(Clone, Copy, Debug, Display, Error)]
-pub enum Error {
+#[derive(Debug, Display, Error, From)]
+pub enum Error {    
+    #[display(fmt = "There is no object with the ID {}.", _0)]
+    NonexistentId(#[error(ignore)] usize),
+
     #[display(fmt = "An internal error occurred on the server.")]
     Internal(InternalError),
-
-    #[display(fmt = "There is no game with the requested ID.")]
-    NonexistentGameId,
-
-    #[display(fmt = "There is no user with the requested ID.")]
-    NonexistentUserId,
 }
 
 impl ResponseError for Error {
     // TODO?
 }
 
-#[derive(Clone, Copy, Debug, Display, Error)]
+#[derive(Debug, Display, Error, From)]
 pub enum InternalError {
-    DuplicateGameId,
-    DuplicateUserId,
-    NoAvailableIds,
-    PoisonedMutex,
-    SseTrySendError
+    DuplicateId(#[error(ignore)] usize),
+    SseTrySendError(TrySendError<Bytes>),
+    JsonSerializationError(serde_json::Error),
 }
 
-impl<T> From<TrySendError<T>> for Error {
-    fn from(_: TrySendError<T>) -> Self {
-        Self::Internal(InternalError::SseTrySendError)
+impl From<TrySendError<Bytes>> for Error {
+    fn from(error: TrySendError<Bytes>) -> Self {
+        Self::Internal(InternalError::SseTrySendError(error))
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Self {
+        Self::Internal(InternalError::JsonSerializationError(error))
     }
 }
