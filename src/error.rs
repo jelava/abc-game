@@ -1,10 +1,10 @@
-use actix_web::{ResponseError, web::Bytes};
+use actix_web::{web::Bytes, ResponseError};
 use derive_more::{Display, Error, From};
 use futures::channel::mpsc::TrySendError;
 use serde_json;
 
 #[derive(Debug, Display, Error, From)]
-pub enum Error {    
+pub enum Error {
     #[display(fmt = "There is no object with the ID {}.", _0)]
     NonexistentId(#[error(ignore)] usize),
 

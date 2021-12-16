@@ -1,4 +1,4 @@
-use crate::{error::Error, HttpResult, sse, State};
+use crate::{error::Error, sse, HttpResult, State};
 use actix_web::{get, patch, post, web, HttpResponse, ResponseError};
 use futures::join;
 use serde::Serialize;
@@ -84,36 +84,6 @@ impl Default for GameConfig {
     }
 }
 
-// Hosting a new game
-
-#[derive(Serialize)]
-struct HostGameResponse {
-    game_id: usize,
-}
-
-#[post("/{name}/host/{host_id}")]
-async fn host_game<'a>(
-    web::Path((name, host_id)): web::Path<(String, usize)>,
-    data: web::Data<State>,
-) -> HttpResult {
-    let (users, mut games) = join!(data.connected_users.lock(), data.open_games.lock());
-
-    let host_name = users.get(host_id)?.name.clone();
-
-    let new_game = OpenGame {
-        name,
-        host_name,
-        config: GameConfig::default(),
-        players: HashSet::new(),
-    };
-
-    let game_id = games.insert_new(new_game)?;
-
-    Ok(HttpResponse::Created().json(HostGameResponse { game_id }))
-}
-
-// Joining an open game
-
 #[derive(Serialize)]
 pub struct GameInfo<'a> {
     game_id: usize,
@@ -131,24 +101,6 @@ impl<'a> GameInfo<'a> {
             player_count: game.players.len(),
         }
     }
-}
-
-#[patch("/{game_id}/join/{player_id}")]
-async fn join_game<'a>(
-    web::Path((game_id, player_id)): web::Path<(usize, usize)>,
-    data: web::Data<State>,
-) -> Result<HttpResponse, Error> {
-    let (mut users, mut games) = join!(data.connected_users.lock(), data.open_games.lock());
-
-    let game = games.get_mut(game_id)?;
-    game.players.insert(player_id);
-
-    for user in users.values_mut() {
-        let event = sse::Event::GameOpened(GameInfo::new(game_id, game));
-        user.sender.try_send(event)?;
-    }
-
-    Ok(HttpResponse::Ok().finish())
 }
 
 // Get a list of open games
@@ -169,6 +121,55 @@ async fn get_games<'a>(data: web::Data<State>) -> HttpResponse {
     HttpResponse::Ok().json(GetGamesResponse { games: game_infos })
 }
 
+// Joining an open game
+
+#[patch("/{game_id}/join/{player_id}")]
+async fn join_game<'a>(
+    web::Path((game_id, player_id)): web::Path<(usize, usize)>,
+    data: web::Data<State>,
+) -> Result<HttpResponse, Error> {
+    let (mut users, mut games) = join!(data.lobby_users.lock(), data.open_games.lock());
+
+    let game = games.get_mut(game_id)?;
+    game.players.insert(player_id);
+
+    for user in users.values_mut() {
+        let event = sse::Event::GameOpened(GameInfo::new(game_id, game));
+        // TODO: do not return if an event fails to reach a user!
+        user.sender.try_send(event)?;
+    }
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+// Hosting a new game
+
+#[derive(Serialize)]
+struct HostGameResponse {
+    game_id: usize,
+}
+
+#[post("/host/{host_id}")]
+async fn host_game<'a>(
+    web::Path(host_id): web::Path<usize>,
+    data: web::Data<State>,
+) -> HttpResult {
+    let (users, mut games) = join!(data.lobby_users.lock(), data.open_games.lock());
+
+    let host_name = users.get(host_id)?.name.clone();
+
+    let new_game = OpenGame {
+        name,
+        host_name,
+        config: GameConfig::default(),
+        players: HashSet::new(),
+    };
+
+    let game_id = games.insert_new(new_game)?;
+
+    Ok(HttpResponse::Created().json(HostGameResponse { game_id }))
+}
+
 // Starting a game
 
 #[patch("/{game_id}/start")]
@@ -179,7 +180,7 @@ async fn start_game<'a>(
     let (mut open_games, mut active_games, mut users) = join!(
         data.open_games.lock(),
         data.active_games.lock(),
-        data.connected_users.lock()
+        data.lobby_users.lock()
     );
 
     let game: ActiveGame = open_games.remove(game_id)?.into();

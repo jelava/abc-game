@@ -1,14 +1,128 @@
-/************************
- * Choosing a user name *
- ************************/
+/*******************
+ * Creating a user *
+ *******************/
 
+ const adjectives = [
+    'ambitious',
+    'belching',
+    'chaotic',
+    'distinctive',
+    'elusive',
+    'flatulent',
+    'gaseous',
+    'humorous',
+    'irritating',
+    'jaunty',
+    'kaleidoscopic',
+    'loyal',
+    'microscopic',
+    'noisy',
+    'odious',
+    'peaceful',
+    'quick',
+    'royal',
+    'smelly',
+    'terrific',
+    'uncanny',
+    'vast',
+    'wispy',
+    'xyloid',
+    'yawning',
+    'zealous'
+];
 
+const animals = [
+    'axolotl',
+    'bumblebee',
+    'chipmunk',
+    'dodo',
+    'elephant',
+    'fox',
+    'gorilla',
+    'hedgehog',
+    'ibex',
+    'jellyfish',
+    'krill',
+    'lemur',
+    'moose',
+    'narwhal',
+    'okapi',
+    'porpoise',
+    'quokka',
+    'robin',
+    'skunk',
+    'termite',
+    'uakari',
+    'vole',
+    'wildebeest',
+    'xenoceratops',
+    'yak',
+    'zebu'
+];
+
+let userId;
+
+document.addEventListener('DOMContentLoaded', () => {
+    userId = sessionStorage.getItem('userId');
+    const oldUserName = localStorage.getItem('userName');
+
+    if (userId) {
+        showLobby();
+    } else if (oldUserName) {
+        document.getElementById('userNameInput').value = oldUserName;
+    } else {
+        onRandomizeName();
+    }
+});
+
+const onRandomizeName = () => {
+    const r1 = Math.floor(Math.random() * adjectives.length);
+    const r2 = Math.floor(Math.random() * animals.length);
+    document.getElementById('userNameInput').value = `${adjectives[r1]} ${animals[r2]}`;
+};
+
+const onCreateUser = () => {
+    const userName = document.getElementById('userNameInput').value;
+
+    if (userName.length >= 3) {
+        localStorage.setItem('userName', userName);
+        const eventSource = new EventSource(`/users/${userName}`);
+        eventSource.addEventListener('userCreated', onUserCreated);
+    } else {
+        alert('Please choose a nickname with at least three letters.');
+    }
+};
+
+const onUserCreated = event => {
+    userId = parseInt(event.data, 10);
+    sessionStorage.setItem('userId', userId);
+    showLobby();
+};
 
 /*************************
  * Displaying open games *
  *************************/
 
-let gameId = -1;
+let gameId;
+ 
+const showLobby = () => {
+    document.getElementById('createUser').style.display = 'none';
+
+    gameId = sessionStorage.getItem('gameId');
+
+    if (gameId) {
+        onJoinGame(gameId)();
+    }
+
+    document.getElementById('hostOrConnect').style.display = 'revert';
+
+    fetch('/games', { method: 'GET' })
+        .then(response => response.json())
+        .then(json => json.games)
+        .then(fillGameList)
+        .catch(console.error);
+};
+
 
 const fillGameList = games => {
     const gameList = document.getElementById('gameList');
@@ -33,20 +147,8 @@ const fillGameList = games => {
     }
 };
 
-let userId = fetch('/users/test', { method: 'POST' })
-    .then(response => response.json())
-    .then(json => json.user_id)
-    .catch(console.error);
-
-fetch('/games', { method: 'GET' })
-    .then(response => response.json())
-    .then(json => json.games)
-    .then(fillGameList)
-    .catch(console.error);
-
-const onJoinGame = selectGameId => async () => {
-    gameId = selectGameId;
-    userId = await userId;
+const onJoinGame = selectedGameId => async () => {
+    gameId = selectedGameId;
 
     const initials = await fetch(`/games/${gameId}/join/${userId}`, { method: 'PATCH' })
         .then(response => response.json())

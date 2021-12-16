@@ -15,7 +15,6 @@ const CHANNEL_BUFFER_SIZE: usize = 512;
 
 #[derive(Clone)]
 pub struct EventSender(pub Sender<Bytes>);
-//pub struct EventSender(pub Sender<Result<Bytes, Error>>);
 
 pub struct EventReceiver(Receiver<Bytes>);
 
@@ -47,7 +46,7 @@ impl EventSender {
         }
     }
 
-    pub fn try_send_bytes(&mut self, bytes: Bytes) -> Result<(), Error> {
+    fn try_send_bytes(&mut self, bytes: Bytes) -> Result<(), Error> {
         let Self(sender) = self;
         sender.try_send(bytes).map_err(|error| error.into())
     }
@@ -108,16 +107,6 @@ impl<'a> Event<'a> {
 
 impl<'a> From<Event<'a>> for serde_json::Result<Bytes> {
     fn from(event: Event) -> Self {
-        /*
-        match event.data() {
-            Ok(data) => format!("event: {}\ndata: {}\n\n", event.name(), data).into(),
-            Err(error) => error
-        }
-        */
-
-        //event.data()
-        //    .m
-
         Ok(format!("event: {}\ndata: {}\n\n", event.name(), event.data()?).into())
     }
 }

@@ -14,8 +14,9 @@
         <div id="createUser">
             <h3>Welcome!</h3>
             <p>Enter a nickname below, or use a randomly chosen one:</p>
-            <input name="userName" type="text" required>
-            <button onclick=onCreateUser>Use this name</button>
+            <input id="userNameInput" name="userName" type="text" required>
+            <button onclick="onRandomizeName(event)">Randomize name</button>
+            <button onclick="onCreateUser(event)">Use this name</button>
         </div>
 
         <div id="hostOrConnect">

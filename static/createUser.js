@@ -75,20 +75,20 @@ const onRandomizeName = () => {
     document.getElementById('userNameInput').value = `${adjectives[r1]} ${animals[r2]}`;
 };
 
-const onCreateUser = async event => {
+const onCreateUser = event => {
     const userName = document.getElementById('userNameInput').value;
 
     if (userName.length >= 3) {
         localStorage.setItem('userName', userName);
-        const eventSource = new EventSource(`/users/${userName}`);
-        eventSource.addEventListener('userCreated', onUserCreated);
+
+        const userId = fetch(`/users/${userName}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(json => {
+                sessionStorage.setItem('userId', json.user_id);
+                location.pathname = '/lobby.html';
+            })
+            .catch(console.error);
     } else {
         alert('Please choose a nickname with at least three letters.');
     }
-};
-
-const onUserCreated = event => {
-    let userId = parseInt(event.data, 10);
-    sessionStorage.setItem('userId', userId);
-    location.pathname = '/games.html'
 };

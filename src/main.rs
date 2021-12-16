@@ -1,48 +1,44 @@
 mod error;
 mod games;
+mod lobby;
 mod sse;
 mod users;
 
-use crate::{games::*, users::*, error::*};
+use crate::{error::*, games::*, lobby::*, users::*, sse::EventSender};
 use actix_files::Files;
 use actix_web::{middleware, web, App, HttpResponse, HttpServer};
 use futures::lock::Mutex;
-use std::{
-    collections::HashMap,
-    default::Default
-};
+use std::{collections::HashMap, default::Default};
 
 pub type HttpResult = Result<HttpResponse, Error>;
 
 pub struct State {
-    unconnected_users: Mutex<IdMap<UnconnectedUser>>,
-    connected_users: Mutex<IdMap<ConnectedUser>>,
+    users: Mutex<IdMap<User>>,
+    lobby: Mutex<Vec<EventSender>>,
     open_games: Mutex<IdMap<OpenGame>>,
-    active_games: Mutex<IdMap<ActiveGame>>
+    active_games: Mutex<IdMap<ActiveGame>>,
 }
 
 #[derive(Default)]
 pub struct IdMap<V> {
     next_id: usize,
-    map: HashMap<usize, V>
+    map: HashMap<usize, V>,
 }
 
 impl<V> IdMap<V> {
     fn new() -> Self {
         Self {
             next_id: 0,
-            map: HashMap::new()
+            map: HashMap::new(),
         }
     }
 
     fn get(&self, id: usize) -> Result<&V, Error> {
-        self.map.get(&id)
-            .ok_or(Error::NonexistentId(id))
+        self.map.get(&id).ok_or(Error::NonexistentId(id))
     }
 
     fn get_mut(&mut self, id: usize) -> Result<&mut V, Error> {
-        self.map.get_mut(&id)
-            .ok_or(Error::NonexistentId(id))
+        self.map.get_mut(&id).ok_or(Error::NonexistentId(id))
     }
 
     fn insert_new(&mut self, value: V) -> Result<usize, Error> {
@@ -52,20 +48,19 @@ impl<V> IdMap<V> {
 
         match maybe_old_value {
             Some(_) => Err(Error::Internal(InternalError::DuplicateId(id))),
-            None => Ok(id)
+            None => Ok(id),
         }
     }
 
     fn insert_existing(&mut self, id: usize, value: V) -> Result<(), Error> {
         match self.map.insert(id, value) {
             Some(_) => Err(Error::Internal(InternalError::DuplicateId(id))),
-            None => Ok(())
+            None => Ok(()),
         }
     }
 
     fn remove(&mut self, id: usize) -> Result<V, Error> {
-        self.map.remove(&id)
-            .ok_or(Error::NonexistentId(id))
+        self.map.remove(&id).ok_or(Error::NonexistentId(id))
     }
 
     fn values(&self) -> std::collections::hash_map::Values<'_, usize, V> {
@@ -90,10 +85,11 @@ async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let data = web::Data::new(State {
-        unconnected_users: Mutex::new(IdMap::new()),
-        connected_users: Mutex::new(IdMap::new()),
+        //unconnected_users: Mutex::new(IdMap::new()),
+        users: Mutex::new(IdMap::new()),
+        lobby: Mutex::new(Vec::new()),
         open_games: Mutex::new(IdMap::new()),
-        active_games: Mutex::new(IdMap::new())
+        active_games: Mutex::new(IdMap::new()),
     });
 
     HttpServer::new(move || {
@@ -101,8 +97,9 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .app_data(data.clone())
             .configure(users::config)
+            .configure(lobby::config)
             .configure(games::config)
-            .service(Files::new("/", "./static").index_file("createUser.html"))
+            .service(Files::new("/", "./static").index_file("index.html"))
     })
     .bind("127.0.0.1:8080")?
     .run()
