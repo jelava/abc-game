@@ -58,10 +58,11 @@ const animals = [
 
 document.addEventListener('DOMContentLoaded', () => {
     const userId = sessionStorage.getItem('userId');
+    const gameId = sessionStorage.getItem('gameId');
     const oldUserName = localStorage.getItem('userName');
 
     if (userId) {
-        location.pathname='/games.html';
+        location.pathname = gameId ? '/play.html' : '/lobby.html';
     } else if (oldUserName) {
         document.getElementById('userNameInput').value = oldUserName;
     } else {

@@ -19,23 +19,6 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     );
 }
 
-/// State related to a game running on the server. Games are stored in a vector behind a mutex,
-/// so there is no need for additional mutexes on the initials and players fields (because only
-/// one thread should ever be allowed to access an `OpenGame` struct at a time).
-pub struct OpenGame {
-    name: String,
-    host_name: String,
-    config: GameConfig,
-    //initials: Vec<(char, char)>,
-    players: HashSet<usize>,
-}
-
-pub struct ActiveGame {
-    config: GameConfig,
-    initials: Vec<(char, char)>,
-    players: HashSet<usize>,
-}
-
 // Open game - joining
 // start: open -> active
 // Active game - get initials, type names
@@ -44,6 +27,22 @@ pub struct ActiveGame {
 // all scores submitted: scoring -> finished
 // Finished game - show scores
 // all players get scores: remove finished game
+
+/// An `OpenGame` is a game that is displayed and updated on the lobby so that other
+/// players can join it.
+pub struct OpenGame {
+    host_name: String,
+    config: GameConfig,
+    players: HashSet<usize>,
+}
+
+/// An `ActiveGame` is a game in progress that is no longer shown on the lobby and not
+/// open to new players.
+pub struct ActiveGame {
+    config: GameConfig,
+    initials: Vec<(char, char)>,
+    players: HashSet<usize>,
+}
 
 pub struct ScoringGame {
     // TODO!
@@ -87,7 +86,6 @@ impl Default for GameConfig {
 #[derive(Serialize)]
 pub struct GameInfo<'a> {
     game_id: usize,
-    name: &'a str,
     host_name: &'a str,
     player_count: usize,
 }
@@ -96,7 +94,6 @@ impl<'a> GameInfo<'a> {
     fn new(game_id: usize, game: &'a OpenGame) -> Self {
         Self {
             game_id,
-            name: game.name.as_str(),
             host_name: game.host_name.as_str(),
             player_count: game.players.len(),
         }
@@ -150,22 +147,30 @@ struct HostGameResponse {
 }
 
 #[post("/host/{host_id}")]
-async fn host_game<'a>(
-    web::Path(host_id): web::Path<usize>,
-    data: web::Data<State>,
-) -> HttpResult {
-    let (users, mut games) = join!(data.lobby_users.lock(), data.open_games.lock());
+async fn host_game<'a>(web::Path(host_id): web::Path<usize>, data: web::Data<State>) -> HttpResult {
+    let (users, lobby, mut games) =
+        join!(data.users.lock(), data.lobby.lock(), data.open_games.lock());
 
     let host_name = users.get(host_id)?.name.clone();
 
     let new_game = OpenGame {
-        name,
         host_name,
         config: GameConfig::default(),
         players: HashSet::new(),
     };
 
     let game_id = games.insert_new(new_game)?;
+
+    for sender in lobby.values() {
+        sender
+            .clone()
+            .try_send(sse::Event::GameOpened(GameInfo::new(
+                game_id,
+                games.get(game_id)?,
+            )));
+        
+        // TODO: do something w/ return value from try_send in case of error? Retry sending the message? Remove the user from the lobby?
+    }
 
     Ok(HttpResponse::Created().json(HostGameResponse { game_id }))
 }

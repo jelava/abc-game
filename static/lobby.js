@@ -10,20 +10,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const addGameToList = game => {
-    const gameList = document.getElementById('gameList');
-
     const button = document.createElement('button');
     button.appendChild(document.createTextNode('Join'));
-    button.addEventListener('click', onJoinGame(game.game_id, game.name, game.host_name));
+    button.addEventListener('click', onJoinGame.bind(window, game.game_id));
 
-    const gameDescription = `${game.name} – host: ${game.host_name}, players: ${game.player_count}`;
+    const gameDescription = `#${game.game_id} – host: ${game.host_name}, players: ${game.player_count}`;
 
     const listItem = document.createElement('li');
     listItem.setAttribute('gameId', game.game_id);
     listItem.appendChild(document.createTextNode(gameDescription))
     listItem.appendChild(button);
 
-    gameList.appendChild(listItem);
+    document.getElementById('gameList')
+        .appendChild(listItem);
 };
 
 const removeGameFromList = gameId => {
@@ -40,7 +39,7 @@ const removeGameFromList = gameId => {
 };
 
 const joinLobby = () => {
-    const eventSource = new EventSource(`/lobby`);
+    const eventSource = new EventSource(`/lobby/join/${userId}`);
     eventSource.addEventListener('gameOpened', onGameOpened);
     eventSource.addEventListener('gameClosed', onGameClosed);
 };
@@ -56,19 +55,21 @@ const onGameClosed = event => {
     console.warn(gameId);
 };
 
-const onJoinGame = (gameId, gameName, hostName) => async () => {
-    sessionStorage.setItem('gameId', gameId);
-    //sessionStorage.setItem('gameName', gameName);
-    //sessionStorage.setItem('hostName', hostName);
-    location.pathname = 'wait.html';
+const onJoinGame = gameId => {
+    fetch(`/lobby/leave/${userId}`, { method: 'POST' })
+        .catch(console.error)
+        .finally(() => {
+            sessionStorage.setItem('gameId', gameId);
+            location.pathname = 'wait.html';        
+        });
 };
 
 const onHost = () => {
     fetch(`/games/host/${userId}`, { method: 'POST' })
         .then(response => response.json())
         .then(json => {
-            sessionStorage.setItem('gameId');
-            location.pathname('wait.html');
+            console.warn(json);
+            onJoinGame(json.game_id);
         })
         .catch(console.error);
 };

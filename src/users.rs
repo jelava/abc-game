@@ -16,10 +16,7 @@ struct UsersResponse {
 }
 
 #[post("/{name}")]
-async fn create_user(
-    web::Path(name): web::Path<String>,
-    data: web::Data<State>,
-) -> HttpResult {
+async fn create_user(web::Path(name): web::Path<String>, data: web::Data<State>) -> HttpResult {
     let user_id = {
         let mut users = data.users.lock().await;
         users.insert_new(User { name })?

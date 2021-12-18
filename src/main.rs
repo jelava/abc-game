@@ -4,7 +4,7 @@ mod lobby;
 mod sse;
 mod users;
 
-use crate::{error::*, games::*, lobby::*, users::*, sse::EventSender};
+use crate::{error::*, games::*, lobby::*, sse::EventSender, users::*};
 use actix_files::Files;
 use actix_web::{middleware, web, App, HttpResponse, HttpServer};
 use futures::lock::Mutex;
@@ -14,7 +14,7 @@ pub type HttpResult = Result<HttpResponse, Error>;
 
 pub struct State {
     users: Mutex<IdMap<User>>,
-    lobby: Mutex<Vec<EventSender>>,
+    lobby: Mutex<IdMap<EventSender>>,
     open_games: Mutex<IdMap<OpenGame>>,
     active_games: Mutex<IdMap<ActiveGame>>,
 }
@@ -87,7 +87,7 @@ async fn main() -> std::io::Result<()> {
     let data = web::Data::new(State {
         //unconnected_users: Mutex::new(IdMap::new()),
         users: Mutex::new(IdMap::new()),
-        lobby: Mutex::new(Vec::new()),
+        lobby: Mutex::new(IdMap::new()),
         open_games: Mutex::new(IdMap::new()),
         active_games: Mutex::new(IdMap::new()),
     });

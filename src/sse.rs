@@ -46,10 +46,12 @@ impl EventSender {
         }
     }
 
+    /*
     fn try_send_bytes(&mut self, bytes: Bytes) -> Result<(), Error> {
         let Self(sender) = self;
         sender.try_send(bytes).map_err(|error| error.into())
     }
+    */
 }
 
 impl Stream for EventReceiver {

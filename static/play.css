@@ -1,0 +1,25 @@
+/* all of these default to being hidden */
+#waitForStart,
+#playGame,
+.validName,
+.invalidName,
+.removeName {
+    display: none;
+}
+
+.icon {
+    vertical-align: top;
+    width: 20px;
+    height: 20px;
+    background-color: lightgray;
+    border: 1px solid purple;
+    text-align: center;
+}
+
+.validName {
+    background-color: cornflowerblue;
+}
+
+.invalidName {
+    background-color: coral;
+}

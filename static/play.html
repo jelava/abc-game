@@ -9,5 +9,27 @@
 
     <body>
         <h1>The 🄰🄱🄲 Game</h1>
+
+        <div id="waitForStart">
+            <h4>Connected to game #<span id="connectedGameId">###</span></h4>
+            <p>There <span id="connectedPlayerCount">are # player(s)</span> connected</p>
+            <p>Waiting for the game to begin...</p>
+        </div>
+
+        <div id="mainGame">
+            <h4>Time left: <span id="gameTimer">#:##</span></h4>
+            
+            <div class="nameList">
+                <h3 class="initials">__</h3>
+                <ol>
+                    <li class="nameInput">
+                        <input type="text" oninput="onNameChange(event)">
+                        <button class="removeName icon" onclick="onRemoveName(event)">-</button>
+                        <span class="validName icon">✓</span>
+                        <button class="invalidName icon" onclick="onShowValidationError(event)">?</button>
+                    </li>
+                </ol>
+            </div>
+        </div>
     </body>
 </html>
